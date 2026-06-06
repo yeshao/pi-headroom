@@ -1,0 +1,9 @@
+# pi-headroom
+
+Transparent LLM context compression for [Pi](https://pi.dev), powered by [Headroom](https://github.com/chopratejas/headroom) ([headroom-ai](https://github.com/chopratejas/headroom/tree/main/sdk/typescript) SDK).
+
+Compresses the message array before each LLM call via the `context` event hook. Achieves 60–95% token reduction with zero accuracy loss. No Python required — runs headroom-ai as an in-process TypeScript library.
+
+## Acknowledgments
+
+This extension wraps the [headroom-ai](https://github.com/chopratejas/headroom) SDK by [chopratejas](https://github.com/chopratejas), which provides the content-aware compression pipeline (SmartCrusher, CacheAligner, IntelligentContext, and more).
