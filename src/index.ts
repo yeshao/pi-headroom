@@ -32,10 +32,83 @@ import {
 	getStatusBarText,
 } from "./stats.js";
 import { estimateTokens } from "./config.js";
+import { extractTextContent } from "./format-bridge.js";
 
 // ---------------------------------------------------------------------------
 // Extension entry point
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Tool call pairing validation
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate that tool call/result pairs are intact after compression.
+ * If headroom removes a toolResult but keeps the assistant message with tool_calls
+ * (or vice versa), the LLM will error on the next turn. Restore orphaned pairs
+ * from the original messages.
+ */
+function validateToolCallPairing(
+	original: AgentMessage[],
+	compressed: AgentMessage[],
+): AgentMessage[] {
+	// Collect tool call IDs and tool result IDs from compressed messages
+	const compressedToolCallIds = new Set<string>();
+	const compressedToolResultIds = new Set<string>();
+
+	for (const msg of compressed) {
+		const m = msg as Record<string, unknown>;
+		if (m.role === "assistant" && Array.isArray(m.tool_calls)) {
+			for (const tc of m.tool_calls as Array<{ id: string }>) {
+				compressedToolCallIds.add(tc.id);
+			}
+		}
+		if (m.role === "tool" && m.tool_call_id) {
+			compressedToolResultIds.add(m.tool_call_id as string);
+		}
+	}
+
+	// Find orphaned IDs — calls without results or results without calls
+	const orphanedCallIds = [...compressedToolCallIds].filter(
+		(id) => !compressedToolResultIds.has(id),
+	);
+	const orphanedResultIds = [...compressedToolResultIds].filter(
+		(id) => !compressedToolCallIds.has(id),
+	);
+
+	if (orphanedCallIds.length === 0 && orphanedResultIds.length === 0) {
+		return compressed; // All pairs intact
+	}
+
+	// Build lookup from original messages by tool call ID
+	const originalByToolCallId = new Map<string, AgentMessage>();
+	for (const msg of original) {
+		const m = msg as Record<string, unknown>;
+		if (m.role === "assistant" && Array.isArray(m.tool_calls)) {
+			for (const tc of m.tool_calls as Array<{ id: string }>) {
+				originalByToolCallId.set(tc.id, msg);
+			}
+		}
+		if (m.role === "tool" && m.tool_call_id) {
+			originalByToolCallId.set(m.tool_call_id as string, msg);
+		}
+	}
+
+	// Restore orphaned pairs from originals
+	const restored = [...compressed];
+	const restoredIds = new Set<string>();
+
+	for (const id of [...orphanedCallIds, ...orphanedResultIds]) {
+		if (restoredIds.has(id)) continue;
+		const originalMsg = originalByToolCallId.get(id);
+		if (originalMsg) {
+			restored.push(originalMsg);
+			restoredIds.add(id);
+		}
+	}
+
+	return restored;
+}
 
 export default function headroomExtension(pi: ExtensionAPI) {
 	// State — config.enabled is the single source of truth (no local shadow)
@@ -116,7 +189,7 @@ export default function headroomExtension(pi: ExtensionAPI) {
 			}
 
 			// Return compressed messages
-			return { messages: compressed };
+			return { messages: validateToolCallPairing(messages, compressed) };
 		} catch (err) {
 			// Compression failed — log and fall through with original messages
 			ctx.ui.notify(
@@ -136,14 +209,13 @@ export default function headroomExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		// Skip compression for array-format content — format bridge converts
-		// to string, which would change the content type expected by Pi's pipeline
-		if (Array.isArray(event.content)) {
-			return;
-		}
+		// Convert content to string for token estimation (handles both string and array)
+		const contentStr = Array.isArray(event.content)
+			? extractTextContent(event.content)
+			: event.content;
 
 		// Estimate token count of tool result
-		const tokens = estimateTokens(event.content);
+		const tokens = estimateTokens(contentStr);
 		if (tokens < config.maxToolResultTokens) {
 			return;
 		}
@@ -151,7 +223,7 @@ export default function headroomExtension(pi: ExtensionAPI) {
 		// Wrap tool result content as a single-message context for compression
 		const toolMessage: AgentMessage = {
 			role: "user",
-			content: event.content,
+			content: contentStr,
 			timestamp: Date.now(),
 		} as unknown as AgentMessage;
 
@@ -162,11 +234,22 @@ export default function headroomExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const newContent = (
-				compressed[0] as { content?: unknown }
-			).content as (typeof event.content) | undefined;
+			const newContent = (compressed[0] as { content?: unknown })?.content;
 
-			if (newContent) {
+			if (newContent && typeof newContent === "string") {
+				// Record stats for tool result compression
+				recordTurn(sessionStats, {
+					tokensBefore: result.tokensBefore,
+					tokensAfter: result.tokensAfter,
+					tokensSaved: result.tokensSaved,
+					transforms: result.transformsApplied,
+					timestamp: Date.now(),
+				});
+
+				// Return compressed content in the same format as the original
+				if (Array.isArray(event.content)) {
+					return { content: [{ type: "text", text: newContent }] };
+				}
 				return { content: newContent };
 			}
 		} catch (err) {

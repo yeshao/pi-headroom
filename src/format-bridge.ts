@@ -310,7 +310,7 @@ export function openAIToPi(messages: unknown[]): AgentMessage[] {
  * Pi user content can be a string or an array of TextContent/ImageContent blocks.
  * For headroom compression, we need a plain string.
  */
-function extractTextContent(content: unknown): string {
+export function extractTextContent(content: unknown): string {
 	if (typeof content === "string") {
 		return content;
 	}
