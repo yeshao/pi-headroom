@@ -79,6 +79,8 @@ The extension reads settings from Pi's settings system. Relevant config keys:
 | `headroom.minContextLength` | `number` | `3` | Minimum message count before compression runs |
 | `headroom.maxToolResultTokens` | `number` | `4096` | Compress tool results exceeding this token count |
 | `headroom.showStats` | `boolean` | `true` | Show compression stats in status bar |
+| `headroom.minTokensPct` | `number` | `0.3` | Minimum % of context window used before compression fires (default 30%) |
+| `headroom.maxTokensPct` | `number` | `0.5` | Target ceiling % after compression (default 50%) |
 
 ## How It Works
 
@@ -117,15 +119,19 @@ pi-headroom/
 ├── README.md
 ├── src/
 │   ├── index.ts            # Extension entry: hooks, commands, tools
-│   ├── headroom-client.ts  # headroom-ai SDK wrapper
+│   ├── headroom-client.ts  # headroom-ai SDK wrapper with threshold logic
 │   ├── format-bridge.ts    # Pi ↔ OpenAI message format conversion
-│   ├── config.ts           # Configuration and compression profiles
+│   ├── ccr-store.ts         # CCR hash→original content retrieval
+│   ├── config.ts           # Configuration, profiles, token thresholds
 │   └── stats.ts            # Compression statistics tracking
 └── tests/
     ├── format-bridge.test.ts  # Format conversion tests
     ├── config.test.ts         # Configuration and token estimation
     ├── stats.test.ts          # Statistics tracking
-    └── regression.test.ts     # Regression tests for fixed bugs
+    ├── regression.test.ts     # Regression tests for fixed bugs
+    ├── safety-bridge.test.ts   # Format bridge round-trip safety
+    ├── safety-client.test.ts   # Wrapper logic with real SDK (fallback mode)
+    └── safety-config.test.ts   # Threshold and profile pure function tests
 ```
 
 ## Development

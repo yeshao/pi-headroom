@@ -1,5 +1,5 @@
 {
-  "name": "pi-headroom",
+  "name": "@yeshao/pi-headroom",
   "version": "0.2.0",
   "type": "module",
   "description": "Transparent LLM context compression for Pi using Headroom",
@@ -29,5 +29,10 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
   "license": "Apache-2.0"
 }

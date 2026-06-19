@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import { piToOpenAI, openAIToPi } from "../src/format-bridge.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
@@ -115,7 +116,7 @@ describe("BUG-03: error handling verification", () => {
 	it("catch block in tool_result handler contains error reporting", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
@@ -141,7 +142,7 @@ describe("BUG-04: compress result flag checking", () => {
 	it("headroom-client source checks result.compressed", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/headroom-client.ts",
+			resolve(__dirname, "../src/headroom-client.ts"),
 			"utf-8",
 		);
 
@@ -157,7 +158,7 @@ describe("BUG-05: protectRecent renamed to minContextLength", () => {
 	it("config uses minContextLength not protectRecent", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const configSrc = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/config.ts",
+			resolve(__dirname, "../src/config.ts"),
 			"utf-8",
 		);
 
@@ -168,7 +169,7 @@ describe("BUG-05: protectRecent renamed to minContextLength", () => {
 	it("index.ts uses minContextLength", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const indexSrc = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
@@ -185,7 +186,7 @@ describe("BUG-06: config.enabled is not shadowed", () => {
 	it("no local let enabled variable in index.ts", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
@@ -202,7 +203,7 @@ describe("BUG-07: targetRatio reaches headroom SDK", () => {
 	it("buildHeadroomConfig references targetRatio", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/config.ts",
+			resolve(__dirname, "../src/config.ts"),
 			"utf-8",
 		);
 
@@ -219,7 +220,7 @@ describe("BUG-08: compressUserMessages removed from config", () => {
 	it("config.ts no longer has compressUserMessages field", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const configSrc = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/config.ts",
+			resolve(__dirname, "../src/config.ts"),
 			"utf-8",
 		);
 
@@ -239,7 +240,7 @@ describe("NEW-01: profile setting affects buildHeadroomConfig", () => {
 	it("config.ts uses profile field in buildHeadroomConfig", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/config.ts",
+			resolve(__dirname, "../src/config.ts"),
 			"utf-8",
 		);
 
@@ -256,7 +257,7 @@ describe("NEW-02: sessionStats resets on session_start", () => {
 	it("session_start handler resets stats", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
@@ -278,7 +279,7 @@ describe("NEW-03: tool result handler skips array content", () => {
 	it("tool_result handler checks for Array.isArray before compressing", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
@@ -300,7 +301,7 @@ describe("NEW-04: status bar updated regardless of compression result", () => {
 	it("status bar update is outside result.compressed block", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
@@ -319,7 +320,7 @@ describe("CONC-01: lastContextMessages not cleared per-context (simulate works)"
 	it("context handler does NOT have a finally block that clears lastContextMessages", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
@@ -336,7 +337,7 @@ describe("CONC-01: lastContextMessages not cleared per-context (simulate works)"
 	it("session_shutdown clears lastContextMessages", () => {
 		const fs = require("node:fs") as typeof import("node:fs");
 		const src = fs.readFileSync(
-			"/Users/yeshao/headroom/pi-headroom/src/index.ts",
+			resolve(__dirname, "../src/index.ts"),
 			"utf-8",
 		);
 
