@@ -14,6 +14,7 @@ Pi agent loop
   ├─ pi-headroom intercepts
   │   ├─ Convert Pi messages → OpenAI format (strip ThinkingContent → _piThinking)
   │   ├─ headroom-ai SDK compress() (in-process, no subprocess)
+  │   ├─ Validate tool call/result pairing (restore orphaned pairs)
   │   ├─ Convert compressed OpenAI → Pi messages (restore ThinkingContent)
   │   └─ Record stats
   │
@@ -24,11 +25,16 @@ Pi agent loop
 - **SDK as library, not proxy.** No Python venv, no subprocess, no HTTP proxy port. The headroom-ai SDK's `compress()` function runs in-process, giving us full access to the compression pipeline, configuration, simulation, and metrics.
 - **Thinking content preserved.** Pi's `ThinkingContent` blocks are stored on each message as `_piThinking` before compression, so they survive message reordering/removal by the compressor.
 - **Format-bridge is minimal.** Pi messages are already OpenAI-compatible. The bridge only handles ThinkingContent strip/restore, ToolCall argument serialization, and Pi-specific field preservation.
+- **Tool call pairing validation.** After compression, validates that every `tool_calls[].id` in assistant messages has a corresponding `tool` result message (and vice versa). Orphaned pairs are restored from the original message array to prevent LLM errors on the next turn.
 
 ## Installation
 
 ```bash
-pi install npm:pi-headroom
+# Clone into Pi extensions directory
+git clone https://github.com/yeshao/pi-headroom.git ~/.omp/agent/extensions/pi-headroom
+
+# Or for project-level
+git clone https://github.com/yeshao/pi-headroom.git .omp/extensions/pi-headroom
 ```
 
 ## Commands
@@ -38,6 +44,7 @@ pi install npm:pi-headroom
 | `/headroom` | Show status, config, and compression stats |
 | `/headroom on` | Enable compression |
 | `/headroom off` | Disable compression |
+| `/headroom profile <speed\|balanced\|maximum>` | Set compression profile |
 | `/headroom profile <speed\|balanced\|maximum>` | Set compression profile |
 | `/headroom-simulate` | Preview compression savings on current context |
 | `/headroom-stats` | Show detailed session statistics |
@@ -87,8 +94,8 @@ The extension reads settings from Pi's settings system. Relevant config keys:
 
 | Hook | Purpose |
 |------|---------|
-| `context` | **Core**: compresses messages before each LLM call |
-| `tool_result` | Optionally compresses large tool result outputs (>maxToolResultTokens) |
+| `context` | **Core**: compresses messages before each LLM call, validates tool call pairing |
+| `tool_result` | Optionally compresses large tool result outputs (>maxToolResultTokens), handles both string and `TextContent[]` formats, records compression stats |
 | `session_start` | Resets compression statistics, updates status bar |
 | `session_shutdown` | Cleans up references, resets statistics |
 
@@ -115,10 +122,10 @@ pi-headroom/
 │   ├── config.ts           # Configuration and compression profiles
 │   └── stats.ts            # Compression statistics tracking
 └── tests/
-    ├── format-bridge.test.ts  # Format conversion tests (29 tests)
-    ├── config.test.ts         # Configuration and token estimation (22 tests)
-    ├── stats.test.ts          # Statistics tracking (10 tests)
-    └── bugs.test.ts           # Regression tests for fixed bugs (19 tests)
+    ├── format-bridge.test.ts  # Format conversion tests
+    ├── config.test.ts         # Configuration and token estimation
+    ├── stats.test.ts          # Statistics tracking
+    └── regression.test.ts     # Regression tests for fixed bugs
 ```
 
 ## Development
