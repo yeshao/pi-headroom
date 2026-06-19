@@ -148,24 +148,10 @@ npm test
 ```
 
 
-## Comparison with Other pi-headroom Implementations
-
-There are several pi-headroom extensions on GitHub. Here's how this one compares:
-
-### yeshao/pi-headroom (this repo)
-
-| Aspect | Approach |
-|--------|----------|
-| **SDK usage** | headroom-ai npm SDK as in-process library (no Python subprocess) |
-| **Compression profiles** | `speed` / `balanced` / `maximum` presets + `targetRatio` override |
-| **Threshold-based compression** | `minTokensPct` / `maxTokensPct` adapt to model context window size |
-| **Format bridge** | Pi ↔ OpenAI conversion with ThinkingContent preservation |
-| **Tool call safety** | Pairing validation (restores orphaned tool call/result pairs) |
-| **CCR** | Hash-based content retrieval via proxy's /v1/retrieve endpoint |
-| **Tests** | 106 tests across 7 files (format bridge, config, regression, safety) |
+## Strengths and Weaknesses
 
 **Strengths:**
-- **No Python dependency.** Runs headroom-ai as an in-process TypeScript library — no venv, no subprocess, no proxy port to manage.
+- **No Python install required.** Runs headroom-ai as an in-process TypeScript library — no venv, no subprocess, no proxy port to manage.
 - **Model-adaptive thresholds.** `minTokensPct`/`maxTokensPct` automatically scale to the model's context window (e.g., 30% of 200K = 60K tokens for Claude 4 Opus, 30% of 128K = 38K for GPT-4o). Avoids cache invalidation in short sessions.
 - **ThinkingContent preservation.** Stores Pi's `ThinkingContent` blocks on each message before compression, so they survive message reordering/removal by the compressor.
 - **Tool call pairing validation.** Post-compression validation ensures every `tool_calls[].id` has a corresponding result message, preventing LLM errors.
@@ -173,49 +159,12 @@ There are several pi-headroom extensions on GitHub. Here's how this one compares
 - **Comprehensive tests.** 106 tests including format bridge round-trip, threshold logic, and profile mapping.
 
 **Weaknesses:**
-- **No ContentRouter safety pipeline.** The npm SDK's `compress()` does not expose `ContentRouterConfig` fields (`exclude_tools`, `protect_recent_code`, `protect_analysis_context`, `read_lifecycle`). This means we can't exclude Read/Write/Edit tool results from compression at the SDK level — we rely on the compressor's built-in defaults.
-- **No proxy auto-management.** Unlike mslavov/pi-headroom, we don't auto-install or auto-start the headroom proxy. The user must run it separately.
-- **The "no Python" advantage is partial.** The npm `headroom-ai` SDK is an HTTP client for the Python proxy — you still need a running proxy somewhere. The difference from mslavov is only that we don't manage the proxy lifecycle for you.
-- **Token estimation is heuristic.** Uses `len(string) / 4` which is crude for CJK text, code with lots of punctuation, or structured data.
-- **Hardcoded model context windows.** The `MODEL_CONTEXT_WINDOWS` table will need manual updates as new models are released (falls back to 128K for unknown models).
-- **targetRatio overrides profile name.** If `targetRatio` is set to any value other than 0.5, the profile name (`speed`/`balanced`/`maximum`) is silently ignored. There is no warning when both are set.
-
-### mslavov/pi-headroom (10 stars)
-
-| Aspect | Approach |
-|--------|----------|
-| **SDK usage** | headroom Python proxy (auto-managed lifecycle) |
-| **Compression profiles** | Passes through headroom defaults |
-| **Auto-management** | Installs `headroom-ai[proxy]`, starts/stops proxy automatically |
-| **Tests** | None |
-
-**Its strengths over us:** Zero-config proxy lifecycle (install, start, health check, crash recovery, graceful shutdown). More battle-tested because it uses the Python pipeline that headroom itself maintains.
-
-**Its weaknesses vs us:** Requires Python ≥3.10. No threshold-based profiles. No ThinkingContent preservation. No tool call pairing validation. No tests.
-
-### brutaldeluxe82/pi-headroom
-
-| Aspect | Approach |
-|--------|----------|
-| **SDK usage** | Python JSONL bridge (long-lived child process) |
-| **Compression profiles** | Per-tool profiles via Headroom's native `ContentRouterConfig` |
-| **Safety pipeline** | Full ContentRouter: `exclude_tools`, `protect_recent_code`, `protect_analysis_context`, `ReadLifecycle` |
-| **Thresholds** | `minTokensPct`/`maxTokensPct` with model-adaptive context windows |
-| **Tests** | None |
-
-**Its strengths over us:** Full ContentRouter safety pipeline — Read/Write/Edit are never compressed, stale reads are safely compressed, recent code is protected. This is the safest approach for preventing edit-breaking compression.
-
-**Its weaknesses vs us:** Requires Python 3.12 + `uv`. No tests. No ThinkingContent preservation. Single-file 1091-line extension is harder to maintain.
-
-### Summary
-
-| Dimension | yeshao (this) | mslavov | brutaldeluxe82 |
-|-----------|--------------|---------|----------------|
-| **Install friction** | Lowest (no Python) | Medium (auto-managed Python) | Highest (Python 3.12 + uv) |
-| **Safety depth** | Good (pairing validation) | Basic (exclude_tools) | Best (full ContentRouter) |
-| **Config granularity** | Good (profiles + thresholds) | Basic (defaults) | Good (thresholds + per-tool) |
-| **Test coverage** | 106 tests | 0 | 0 |
-| **Maintenance** | Clean 5-file structure | Clean 3-file structure | Single 1091-line file |
+- **No ContentRouter safety pipeline.** The npm SDK's `compress()` does not expose `ContentRouterConfig` fields (`exclude_tools`, `protect_recent_code`, `protect_analysis_context`, `read_lifecycle`). We rely on the compressor's built-in defaults.
+- **No proxy auto-management.** The user must run the headroom proxy separately — we don't install, start, or monitor it.
+- **The "no Python" advantage is partial.** The npm `headroom-ai` SDK is an HTTP client for the Python proxy — you still need a running proxy somewhere.
+- **Token estimation is heuristic.** Uses `len(string) / 4` which is crude for CJK text, code, or structured data.
+- **Hardcoded model context windows.** The `MODEL_CONTEXT_WINDOWS` table needs manual updates as new models release (falls back to 128K default).
+- **targetRatio silently overrides profile.** If `targetRatio` ≠ 0.5, the profile name is ignored with no warning.
 
 ---
 
