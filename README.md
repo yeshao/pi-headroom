@@ -175,8 +175,10 @@ There are several pi-headroom extensions on GitHub. Here's how this one compares
 **Weaknesses:**
 - **No ContentRouter safety pipeline.** The npm SDK's `compress()` does not expose `ContentRouterConfig` fields (`exclude_tools`, `protect_recent_code`, `protect_analysis_context`, `read_lifecycle`). This means we can't exclude Read/Write/Edit tool results from compression at the SDK level — we rely on the compressor's built-in defaults.
 - **No proxy auto-management.** Unlike mslavov/pi-headroom, we don't auto-install or auto-start the headroom proxy. The user must run it separately.
+- **The "no Python" advantage is partial.** The npm `headroom-ai` SDK is an HTTP client for the Python proxy — you still need a running proxy somewhere. The difference from mslavov is only that we don't manage the proxy lifecycle for you.
 - **Token estimation is heuristic.** Uses `len(string) / 4` which is crude for CJK text, code with lots of punctuation, or structured data.
 - **Hardcoded model context windows.** The `MODEL_CONTEXT_WINDOWS` table will need manual updates as new models are released (falls back to 128K for unknown models).
+- **targetRatio overrides profile name.** If `targetRatio` is set to any value other than 0.5, the profile name (`speed`/`balanced`/`maximum`) is silently ignored. There is no warning when both are set.
 
 ### mslavov/pi-headroom (10 stars)
 
