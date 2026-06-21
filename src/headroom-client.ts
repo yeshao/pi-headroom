@@ -126,9 +126,18 @@ export class HeadroomClient {
 			fallback: true, // Return uncompressed on failure
 		});
 
+		// If SDK fell back (proxy unavailable), return original Pi messages
+		if (!result.compressed || !result.messages || result.messages.length === 0) {
+			return makeSkipResult(messages);
+		}
+
 		// Safely convert back to Pi messages — never throw
 		try {
 			const compressedPi = openAIToPi(result.messages);
+			if (compressedPi.length === 0) {
+				console.error("[pi-headroom] openAIToPi returned empty, skipping");
+				return makeSkipResult(messages);
+			}
 			return {
 				messages: compressedPi,
 				result,
