@@ -107,17 +107,21 @@ export function piToOpenAI(messages: AgentMessage[]): OpenAIMessage[] {
 						} else if (b.type === "toolCall") {
 							const tc = block as unknown as {
 								id: string;
-								function: { name: string; arguments: unknown };
+								name?: string;
+								arguments?: unknown;
+								function?: { name: string; arguments: unknown };
 							};
+							// Pi toolCall blocks may have name/arguments at top level
+							const fn = tc.function ?? { name: tc.name ?? "unknown", arguments: tc.arguments ?? {} };
 							toolCalls.push({
 								id: tc.id,
 								type: "function",
 								function: {
-									name: tc.function.name,
+									name: fn.name,
 									arguments:
-										typeof tc.function.arguments === "string"
-											? tc.function.arguments
-											: JSON.stringify(tc.function.arguments),
+										typeof fn.arguments === "string"
+											? fn.arguments
+											: JSON.stringify(fn.arguments),
 								},
 							});
 						}
