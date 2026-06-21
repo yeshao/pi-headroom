@@ -59,6 +59,52 @@ function toolCallBlock(id: string, name: string, args: unknown): unknown {
 // piToOpenAI
 // ===========================================================================
 
+
+	it("handles toolCall blocks with top-level name/arguments (no function wrapper)", () => {
+		// Pi toolCall blocks may have name/arguments at the top level
+		const msg = {
+			role: "assistant",
+			content: [
+				{
+					type: "toolCall",
+					id: "call_99",
+					name: "read",
+					arguments: { path: "test.ts" },
+				},
+			],
+		} as unknown as AgentMessage;
+
+		expect(() => piToOpenAI([msg])).not.toThrow();
+
+		const openai = piToOpenAI([msg]);
+		expect(openai[0].tool_calls).toHaveLength(1);
+		expect(openai[0].tool_calls![0].function.name).toBe("read");
+		expect(openai[0].tool_calls![0].function.arguments).toBe('{"path":"test.ts"}');
+	});
+
+
+	it("handles toolCall blocks with top-level name/arguments (no function wrapper)", () => {
+		// Pi toolCall blocks may have name/arguments at the top level
+		const msg = {
+			role: "assistant",
+			content: [
+				{
+					type: "toolCall",
+					id: "call_99",
+					name: "read",
+					arguments: { path: "test.ts" },
+				},
+			],
+		} as unknown as AgentMessage;
+
+	 expect(() => piToOpenAI([msg])).not.toThrow();
+
+		const openai = piToOpenAI([msg]);
+		expect(openai[0].tool_calls).toHaveLength(1);
+		expect(openai[0].tool_calls![0].function.name).toBe("read");
+		expect(openai[0].tool_calls![0].function.arguments).toBe('{"path":"test.ts"}');
+	});
+
 describe("piToOpenAI", () => {
 	it("converts user messages", () => {
 		const msgs = [userMsg("hello")];
