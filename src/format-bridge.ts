@@ -236,6 +236,7 @@ export function openAIToPi(messages: unknown[]): AgentMessage[] {
 				// Restore tool calls (with Record arguments for Pi)
 				if (msg.tool_calls) {
 					for (const tc of msg.tool_calls) {
+						if (!tc.function) continue; // Skip malformed tool calls missing function
 						let args: unknown = tc.function.arguments;
 						try {
 							args = JSON.parse(tc.function.arguments);

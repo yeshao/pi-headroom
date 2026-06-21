@@ -345,6 +345,66 @@ describe("openAIToPi", () => {
 		expect(restored).toHaveLength(1);
 		expect(restored[0].role).toBe("system");
 	});
+
+	it("skips tool_calls with missing function (proxy regression)", () => {
+		// Simulates a compressed message from the proxy where the function
+		// field was stripped during aggressive compression.
+		const malformed = [
+			{
+				role: "assistant",
+				content: null,
+				tool_calls: [
+					{ id: "call_1", type: "function" /* no function */ },
+				],
+			},
+			{
+				role: "assistant",
+				content: "done",
+				tool_calls: [
+					{
+						id: "call_2",
+						type: "function",
+						function: { name: "edit", arguments: '{"file":"a.ts"}' },
+					},
+				],
+			},
+		];
+
+		// Must not throw "Cannot read properties of undefined (reading 'name')"
+		expect(() => openAIToPi(malformed)).not.toThrow();
+
+		const result = openAIToPi(malformed);
+		expect(result).toHaveLength(2);
+
+		// First message: malformed tool call is skipped, content stays null/empty
+		const first = result[0] as unknown as { content: unknown[] };
+		expect(first.content.every(
+			(b: unknown) => (b as { type: string }).type !== "toolCall",
+		)).toBe(true);
+
+		// Second message: valid tool call is preserved
+		const second = result[1] as unknown as { content: Array<{ type: string; function: { name: string } }> };
+		const tc = second.content.find((b) => b.type === "toolCall");
+		expect(tc).toBeDefined();
+		expect(tc!.function.name).toBe("edit");
+	});
+
+	it("handles tool_calls where function is explicitly undefined", () => {
+		const messages = [
+			{
+				role: "assistant",
+				content: "",
+				tool_calls: [
+					{ id: "call_bad", type: "function", function: undefined },
+				],
+			},
+		];
+
+		expect(() => openAIToPi(messages)).not.toThrow();
+		const result = openAIToPi(messages);
+		expect(result).toHaveLength(1);
+	});
+
 });
 
 // ===========================================================================
