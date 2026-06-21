@@ -156,7 +156,7 @@ npm test
 - **ThinkingContent preservation.** Stores Pi's `ThinkingContent` blocks on each message before compression, so they survive message reordering/removal by the compressor.
 - **Tool call pairing validation.** Post-compression validation ensures every `tool_calls[].id` has a corresponding result message, preventing LLM errors.
 - **CCR integration.** Wraps the proxy's retrieve endpoint so the LLM can recover original content by hash.
-- **Comprehensive tests.** 106 tests including format bridge round-trip, threshold logic, and profile mapping.
+**Comprehensive tests.** 108 tests including format bridge round-trip, threshold logic, and profile mapping.
 
 **Weaknesses:**
 - **No ContentRouter safety pipeline.** The npm SDK's `compress()` does not expose `ContentRouterConfig` fields (`exclude_tools`, `protect_recent_code`, `protect_analysis_context`, `read_lifecycle`). We rely on the compressor's built-in defaults.
