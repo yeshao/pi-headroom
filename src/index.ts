@@ -155,21 +155,22 @@ export default function headroomExtension(pi: ExtensionAPI) {
 	// -------------------------------------------------------------------------
 
 	pi.on("context", async (event, ctx) => {
-		if (!config.enabled || !client) {
-			return;
-		}
-
-		const messages = event.messages;
-
-		// Skip compression for very short contexts
-		if (messages.length < config.minContextLength) {
-			return;
-		}
-
-		// Store for /headroom-simulate command
-		lastContextMessages = messages;
-
+		// Bulletproof: ANY error here must never affect the LLM call
 		try {
+			if (!config.enabled || !client) {
+				return;
+			}
+
+			const messages = event.messages;
+
+			// Skip compression for very short contexts
+			if (messages.length < config.minContextLength) {
+				return;
+			}
+
+			// Store for /headroom-simulate command
+			lastContextMessages = messages;
+
 			const { messages: compressed, result } = await client.compressMessages(messages);
 
 			// Only record stats when compression actually ran
@@ -191,11 +192,18 @@ export default function headroomExtension(pi: ExtensionAPI) {
 			// Return compressed messages
 			return { messages: validateToolCallPairing(messages, compressed) };
 		} catch (err) {
-			// Compression failed — log and fall through with original messages
-			ctx.ui.notify(
-				`Headroom compression failed: ${err instanceof Error ? err.message : String(err ?? "unknown")}`,
-				"warning",
-			);
+			// Compression failed — never let this affect the LLM call
+			try {
+				const stack = err instanceof Error ? err.stack : String(err);
+				console.error("[pi-headroom] compression error stack:", stack);
+				ctx.ui.notify(
+					`Headroom compression failed: ${err instanceof Error ? err.message : String(err ?? "unknown")}`,
+					"warning",
+				);
+			} catch {
+				// ui.notify failed too — silently ignore
+			}
+			// Return nothing so Pi uses original messages unchanged
 			return;
 		}
 	});

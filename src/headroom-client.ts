@@ -126,12 +126,17 @@ export class HeadroomClient {
 			fallback: true, // Return uncompressed on failure
 		});
 
-		const compressedPi = openAIToPi(result.messages);
-
-		return {
-			messages: compressedPi,
-			result,
-		};
+		// Safely convert back to Pi messages — never throw
+		try {
+			const compressedPi = openAIToPi(result.messages);
+			return {
+				messages: compressedPi,
+				result,
+			};
+		} catch (e) {
+			console.error("[pi-headroom] openAIToPi failed, returning original messages:", e);
+			return makeSkipResult(messages);
+		}
 	}
 
 	/**
